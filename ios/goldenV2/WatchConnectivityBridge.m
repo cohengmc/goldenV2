@@ -10,7 +10,5 @@ RCT_EXTERN_METHOD(sendMessageToWatch:(NSDictionary *)message
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-+ (BOOL)requiresMainQueueSetup;
-
 @end
 

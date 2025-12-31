@@ -35,12 +35,31 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
   override func sourceURL(for bridge: RCTBridge) -> URL? {
-    self.bundleURL()
+    let url = self.bundleURL()
+    if url == nil {
+      print("ERROR: Bundle URL is nil!")
+    }
+    return url
   }
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    let provider = RCTBundleURLProvider.sharedSettings()
+    // Try to get the bundle URL
+    if let url = provider.jsBundleURL(forBundleRoot: "index") {
+      print("Bundle URL: \(url.absoluteString)")
+      return url
+    }
+    // Fallback: construct URL manually
+    let localhost = "localhost"
+    let port = 8081
+    let bundleRoot = "index"
+    if let url = URL(string: "http://\(localhost):\(port)/\(bundleRoot).bundle?platform=ios&dev=true") {
+      print("Fallback Bundle URL: \(url.absoluteString)")
+      return url
+    }
+    print("ERROR: Could not create bundle URL")
+    return nil
 #else
     Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
