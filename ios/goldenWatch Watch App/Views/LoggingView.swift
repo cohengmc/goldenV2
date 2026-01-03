@@ -7,94 +7,132 @@ struct LoggingView: View {
     
     @State private var sets: [Int] = [5]
     @State private var isSuccess = false
+    @FocusState private var isRepsFocused: Bool
+    @State private var crownRotation: Double = 5.0
     
     var totalVolume: Int {
         sets.reduce(0, +)
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
+        VStack(spacing: 4) {
+            // Compact header
+            HStack {
                 Text(exercise.name)
                     .font(.headline)
                     .multilineTextAlignment(.center)
-                    .padding(.top, 8)
+                    .lineLimit(1)
                 
                 Text("SET \(sets.count)")
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundColor(.blue)
                     .textCase(.uppercase)
-                
-                // Current set controls
-                HStack(spacing: 20) {
-                    Button(action: {
-                        if sets[sets.count - 1] > 1 {
-                            sets[sets.count - 1] -= 1
-                        }
-                    }) {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .background(Circle().fill(Color.gray).frame(width: 32, height: 32))
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Text("\(sets[sets.count - 1])")
-                        .font(.title)
-                        .fontWeight(.black)
-                        .foregroundColor(.white)
-                        .frame(minWidth: 40)
-                    
-                    Button(action: {
-                        sets[sets.count - 1] += 1
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .background(Circle().fill(Color.gray).frame(width: 32, height: 32))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.vertical, 8)
-                
-                // Add set button
-                Button(action: {
-                    sets.append(sets.last ?? 5)
-                }) {
-                    HStack {
-                        Image(systemName: "plus.circle")
-                        Text("Add Set")
-                            .font(.caption)
-                            .textCase(.uppercase)
-                    }
-                    .foregroundColor(.gray)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.black.opacity(0.1))
-                    .cornerRadius(8)
-                }
-                
-                // Confirm button
-                Button(action: {
-                    confirmLog()
-                }) {
-                    VStack(spacing: 4) {
-                        Text("CONFIRM LOG")
-                            .font(.caption)
-                            .fontWeight(.black)
-                            .textCase(.uppercase)
-                        Text("Total: \(totalVolume)")
-                            .font(.system(size: 10))
-                            .opacity(0.8)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color(hex: exercise.color))
-                    .cornerRadius(12)
-                }
             }
-            .padding()
+            .padding(.top, 4)
+            .padding(.horizontal, 8)
+            
+            // Current set controls with digital crown support
+            HStack(spacing: 16) {
+                Button(action: {
+                    if sets[sets.count - 1] > 1 {
+                        sets[sets.count - 1] -= 1
+                        crownRotation = Double(sets[sets.count - 1])
+                    }
+                }) {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                        .background(Circle().fill(Color.gray).frame(width: 28, height: 28))
+                }
+                .buttonStyle(.plain)
+                
+                Text("\(sets[sets.count - 1])")
+                    .font(.system(size: 32, weight: .black))
+                    .foregroundColor(.white)
+                    .frame(minWidth: 50)
+                    .focusable()
+                    .focused($isRepsFocused)
+                    .digitalCrownRotation(
+                        $crownRotation,
+                        from: 1,
+                        through: 100,
+                        by: 1,
+                        sensitivity: .medium,
+                        isContinuous: false,
+                        isHapticFeedbackEnabled: true
+                    )
+                    .onAppear {
+                        crownRotation = Double(sets[sets.count - 1])
+                    }
+                    .onChange(of: crownRotation) { newValue in
+                        let newRepValue = max(1, Int(newValue.rounded()))
+                        if newRepValue != sets[sets.count - 1] {
+                            sets[sets.count - 1] = newRepValue
+                        }
+                    }
+                    .onChange(of: sets[sets.count - 1]) { newValue in
+                        // Sync crown rotation when sets change via buttons
+                        if abs(crownRotation - Double(newValue)) > 0.5 {
+                            crownRotation = Double(newValue)
+                        }
+                    }
+                
+                Button(action: {
+                    sets[sets.count - 1] += 1
+                    crownRotation = Double(sets[sets.count - 1])
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                        .background(Circle().fill(Color.gray).frame(width: 28, height: 28))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 4)
+            
+            // Add set button
+            Button(action: {
+                sets.append(sets.last ?? 5)
+                crownRotation = Double(sets[sets.count - 1])
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.circle")
+                        .font(.caption)
+                    Text("ADD SET")
+                        .font(.caption2)
+                        .textCase(.uppercase)
+                }
+                .foregroundColor(.gray)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .background(Color.black.opacity(0.1))
+                .cornerRadius(6)
+            }
+            .padding(.horizontal, 8)
+            
+            Spacer()
+            
+            // Confirm button
+            Button(action: {
+                confirmLog()
+            }) {
+                VStack(spacing: 2) {
+                    Text("CONFIRM LOG")
+                        .font(.caption2)
+                        .fontWeight(.black)
+                        .textCase(.uppercase)
+                    Text("Total: \(totalVolume)")
+                        .font(.system(size: 9))
+                        .opacity(0.8)
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color(hex: exercise.color))
+                .cornerRadius(10)
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 4)
         }
         .navigationBarTitleDisplayMode(.inline)
         .overlay {
